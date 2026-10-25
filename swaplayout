@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+import subprocess
+
+EN = "qwertyuiop[]asdfghjkl;'zxcvbnm,./\\`"
+UK = "йцукенгшщзхїфівапролджєячсмитьбю.ґ'"
+
+en2uk = dict(zip(EN, UK))
+en2uk.update({c.upper(): u.upper() for c, u in zip(EN, UK) if c.isalpha()})
+en2uk.update({'{': 'Х', '}': 'Ї', ':': 'Ж', '"': 'Є', '<': 'Б', '>': 'Ю', '?': ','})
+uk2en = {v: k for k, v in en2uk.items()}
+
+text = subprocess.run(["wl-paste", "-p", "-n"], capture_output=True, text=True).stdout
+if not text:
+    raise SystemExit
+
+cyr = sum('\u0400' <= c <= '\u04ff' for c in text)
+table = uk2en if cyr > len(text) / 2 else en2uk
+out = "".join(table.get(c, c) for c in text)
+
+subprocess.run(["wl-copy"], input=out, text=True)
+
+subprocess.run(["dbus-send", "--session", "--type=method_call",
+                "--dest=org.kde.keyboard", "/Layouts",
+                "org.kde.KeyboardLayouts.switchToNextLayout"])
